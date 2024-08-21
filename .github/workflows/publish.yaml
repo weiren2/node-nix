@@ -2,10 +2,10 @@ name: Publish/rebuild the latest container image to Docker Hub
 
 on:
   schedule:
-    - cron:  '*/5 * * * *'
+    - cron:  '30 21 * * *'
   push:
     branches:
-      - 'dev'
+      - 'main'
 
 env:
   REGISTRY: index.docker.io
@@ -14,11 +14,12 @@ env:
 
 jobs:
   check:
+    name: Check if the base image has any updates
     runs-on: ubuntu-latest
     outputs:
       needs-updating: ${{ steps.check.outputs.needs-updating }}
     steps:
-      - name: Check if base image has any update available
+      - name: Check updates from Docker Hub
         id: check
         uses: lucacome/docker-image-update-checker@v1
         with:
