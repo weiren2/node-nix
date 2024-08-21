@@ -1,16 +1,35 @@
-name: Publish the container image to Docker Hub
+name: Publish/rebuild the latest container image to Docker Hub
 
 on:
-  release:
-    types: [published]
+  schedule:
+    - cron:  '* * * * *'
+  push:
+    branches:
+      - 'main'
 
 env:
   REGISTRY: index.docker.io
   IMAGE_NAME: ${{ github.repository }}
+  DOCKERHUB_USERNAME: weiren2
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      needs-updating: ${{ steps.check.outputs.needs-updating }}
+    steps:
+      - name: Check if base image has any update available
+        id: check
+        uses: lucacome/docker-image-update-checker@v1
+        with:
+          base-image: node:latest
+          image: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          platforms: linux/amd64,linux/arm64
+
   push_to_registry:
     name: Push Docker image to Docker Hub
+    needs: check
+    if: (github.event_name == 'schedule' && needs.check.outputs.needs-updating == 'true') || (github.event_name == 'push')
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -30,14 +49,14 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       - name: Extract metadata (tags, labels) on Docker Hub
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: weiren2/node-nix
+          images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push Docker image
         id: push
@@ -46,7 +65,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           context: .
           push: true
-          tags: weiren2/node-nix:latest
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
