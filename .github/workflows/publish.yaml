@@ -2,7 +2,7 @@ name: Publish/rebuild the latest container image to Docker Hub
 
 on:
   schedule:
-    - cron:  '21 3 * * *'
+    - cron:  '21 3 * * 6'
   push:
     branches:
       - 'main'
